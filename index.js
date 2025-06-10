@@ -1,4 +1,17 @@
 var request = require('request');
+const Hero = require('@ulixee/hero');
+
+let _heroClient = undefined
+function getHeroClient() {
+	if (_heroClient === undefined) {
+		_heroClient = new Hero({
+			connectionToCore: {
+				host: process.env.ULIXEE_CLOUD_HOST
+			}
+		});
+	}
+	return _heroClient;	
+}
 
 var baseUrl = "https://a.4cdn.org";
 var api = {};
@@ -26,8 +39,22 @@ api.board = function(board) {
 	var subapi = {};
 	subapi._board = board;
 	
-	subapi.image = function(file) {
-		return ["https://i.4cdn.org", board, "src", file].join("/");
+	subapi.image = function(tim, ext) {
+		// no-cache query due to: https://github.com/4chan/4chan-API/issues/99
+		return ["https://i.4cdn.org", board, "src", tim + ext].join("/") + `?no-cache=${Date.now()}`;
+	};
+	
+	subapi.downloadImage = async function(tim, ext) {
+		const url = this.image(tim, ext);
+		const hero = getHeroClient();
+		const page = await hero.goto(url, {
+			waitForLoad: true,
+			waitForRessourcesToComplete: true,
+		});
+		if (page.response.statusCode < 200 || page.response.statusCode >= 300) {
+			throw new Error(`Failed to download image: ${page.response.url}${page.response.url !== url ? ` (requested: ${url})` : ''} - Status Code: ${page.response.statusCode}`);
+		}
+		return page.buffer
 	};
 
 	subapi.catalog = function(cb) {
