@@ -47,14 +47,12 @@ api.board = function(board) {
 	subapi.downloadImage = async function(tim, ext) {
 		const url = this.image(tim, ext);
 		const hero = getHeroClient();
-		const page = await hero.goto(url, {
-			waitForLoad: true,
-			waitForRessourcesToComplete: true,
-		});
-		if (page.response.statusCode < 200 || page.response.statusCode >= 300) {
+		await hero.goto('https://i.4cdn.org/404/src');
+		const response = await hero.fetch(url);
+		if (!response.ok) {
 			throw new Error(`Failed to download image: ${page.response.url}${page.response.url !== url ? ` (requested: ${url})` : ''} - Status Code: ${page.response.statusCode}`);
 		}
-		return page.buffer
+		return response.arrayBuffer();
 	};
 
 	subapi.catalog = function(cb) {
